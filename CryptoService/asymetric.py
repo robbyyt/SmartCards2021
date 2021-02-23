@@ -20,8 +20,10 @@ class AsymetricEncription:
         public_key = private_key.public_key()
         return private_key, public_key
 
-    def encrypt(self, message):
-        encrypted = self.public_key.encrypt(
+    def encrypt(self, message, key):
+        if not key:
+            key = self.public_key
+        encrypted = key.encrypt(
             message.encode(),
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),

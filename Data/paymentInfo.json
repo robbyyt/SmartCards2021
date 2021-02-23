@@ -3,7 +3,7 @@
     "CardExp": "05/2023",
     "CCode": "123",
     "Amount": "99",
-    "NC": "0",
-    "M": "9",
+    "NC": "randomNumber",
+    "M": "Zara",
     "OrderDesc": "85"
 }
