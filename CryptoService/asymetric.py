@@ -7,9 +7,10 @@ from cryptography.hazmat.primitives.asymmetric import padding
 class AsymetricEncription:
     private_key = ''
     public_key = ''
+
     def __init__(self):
         self.private_key, self.public_key = self.generateNewKey()
-    
+
     def generateNewKey(self):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -18,8 +19,8 @@ class AsymetricEncription:
         )
         public_key = private_key.public_key()
         return private_key, public_key
-    
-    def encrypt(self,message):
+
+    def encrypt(self, message):
         encrypted = self.public_key.encrypt(
             message.encode(),
             padding.OAEP(
@@ -30,7 +31,7 @@ class AsymetricEncription:
         )
         return encrypted
 
-    def decrypt(self,encrypted_message):
+    def decrypt(self, encrypted_message):
         original_message = self.private_key.decrypt(
             encrypted_message,
             padding.OAEP(
@@ -40,3 +41,14 @@ class AsymetricEncription:
             )
         )
         return original_message
+
+    def sign(self, message):
+        signed_message = self.private_key.sign(
+            message.encode(),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return signed_message
