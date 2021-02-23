@@ -1,24 +1,27 @@
 import socket
 import uuid
-from CryptoService import asymetric, symetric
+from CryptoService import asymetric, symetric, CryptoService
 import json
-from cryptography.hazmat.primitives import serialization
-
+from Crypto.PublicKey import RSA
 
 HOST = '127.0.0.1'
 PORT_PG = 12345       
 PORT_CLIENT = 54321
 
-asymService = asymetric.AsymetricEncription()
-symService = symetric.SymetricEncription()
+hibridService = CryptoService.CryptoService()
 
-pem = asymService.public_key.public_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
-)
 
 with open('merchant_key.pem', 'wb') as f:
-    f.write(pem)
+    pk = hibridService.rsa_keypair.publickey().export_key()
+    f.write(pk)
+
+def receiveAndDecypt(conn):
+    length = conn.recv(1024).decode()
+    length = length.split()
+    cipherTextClient = conn.recv(int(length[0]))
+    aes_encryped_key_client = conn.recv(int(length[1]))
+    #decode data
+    return hibridService.decrypt_hybrid(cipherTextClient, aes_encryped_key_client)
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT_CLIENT))
@@ -26,41 +29,29 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     conn, addr = s.accept()
     with conn:
         print('Connected by', addr)
-        while True:
-            #receive public key from client
-            clientData = conn.recv(1024)
-            print('public key from client', clientData)
-            #parse public key
-            mess = clientData.decode().split('~')
-            print("mess", len(mess), len(mess[1]))
-            client_aes_key = asymService.decrypt(mess[1]) 
+        #receive cipher text and encrypted aes key and decode data
+        client_pk = receiveAndDecypt(conn)
+        client_pk = RSA.import_key(client_pk)
+        print("client pk", client_pk)
+        
+        #generate uid and signature
+        client_uid = str(uuid.uuid1())
+        client_uid_sign = hibridService.sign_message(client_uid)
+        client_message = client_uid + ' ' + str(client_uid_sign)
+        print("message sended", client_message)
+
+        #encode data for clint
+        client_pk = client_pk
+        chipertext, enc_aes_key = hibridService.encrypt_hybrid(client_message, client_pk)
+        
+        #send cipher text and encripted aes
+        conn.sendall(chipertext)
+        conn.sendall(enc_aes_key)
+
+        # #receive some card info
+        cardInfo = receiveAndDecypt(conn)
+        cardInfo = cardInfo.split("DELIMITATOR")
+        PI,PO = cardInfo[0],cardInfo[1]
+        print("pi,po:", PI, PO)
             
-            client_pk = symService.decrypted_msg(mess[0], client_aes_key)
-
-            client_uid = str(uuid.uuid1())
-            client_uid_sign = asymService.sign(client_uid)
-            client_message = client_uid + '~' + str(client_uid_sign)
-            print("message sended", client_message)
-            encode_client_message = symService.encrypt_message(client_message)
-            encode_aes_key = asymService.encrypt(symService.key, client_pk)
-            encoded_data = str(encode_client_message) + "~" + str(encode_aes_key)
-            
-            #send sid and signature
-            conn.sendall(encoded_data.encode())
-
-            # #receive some card info
-            # cardInfo = conn.recv(1024)
-            
-
-            # #communication with gate    
-            # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as clientSocket:
-            #     clientSocket.connect((HOST, PORT_PG))
-            #     #send PM and signature
-            #     clientSocket.sendall(b'Hello, world')
-            #     #recive a response, sid and signature
-            #     data = clientSocket.recv(1024)
-
-            # #send back to client gate response
-            # if data:
-            #     conn.sendall(data)
 

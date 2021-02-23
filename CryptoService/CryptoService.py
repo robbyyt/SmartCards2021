@@ -12,8 +12,7 @@ class CryptoService:
 
     def encrypt_hybrid(self, message, key=None):
         if not key:
-            key = self.rsa_keypair.publickey()
-
+            key = self.rsa_keypair
         # encrypting aes key
         aes_session_key = get_random_bytes(16)
         chiper_rsa = PKCS1_OAEP.new(key)
