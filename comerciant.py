@@ -9,6 +9,7 @@ PORT_PG = 12345
 PORT_CLIENT = 54321
 
 hibridService = CryptoService.CryptoService()
+gate_key = RSA.import_key(open("gate_key.pem").read())
 
 
 with open('merchant_key.pem', 'wb') as f:
@@ -22,6 +23,15 @@ def receiveAndDecypt(conn):
     aes_encryped_key_client = conn.recv(int(length[1]))
     #decode data
     return hibridService.decrypt_hybrid(cipherTextClient, aes_encryped_key_client)
+
+def encodeAndSend(conn, message, key):
+    chipertext, enc_aes_key = hibridService.encrypt_hybrid(message ,key)
+    print(len(chipertext), len(enc_aes_key))
+    #send cipher and encrypted key to merchant
+    length =str(len(chipertext)) + ' '+str(len(enc_aes_key))  
+    s.sendall(length.encode())
+    s.sendall(chipertext)
+    s.sendall(enc_aes_key)
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT_CLIENT))
@@ -40,18 +50,31 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         client_message = client_uid + ' ' + str(client_uid_sign)
         print("message sended", client_message)
 
-        #encode data for clint
-        client_pk = client_pk
-        chipertext, enc_aes_key = hibridService.encrypt_hybrid(client_message, client_pk)
-        
-        #send cipher text and encripted aes
-        conn.sendall(chipertext)
-        conn.sendall(enc_aes_key)
+        #encode data for clint  send cipher text and encripted aes
+        encodeAndSend(conn, client_message, client_pk)
 
-        # #receive some card info
+        #receive some card info
         cardInfo = receiveAndDecypt(conn)
         cardInfo = cardInfo.split("DELIMITATOR")
-        PI,PO = cardInfo[0],cardInfo[1]
-        print("pi,po:", PI, PO)
+        PM,PO = cardInfo[0],cardInfo[1]
+        print("pM,po:", PM, PO)
+        PM = PM.split(" ")
+        #prepare message for gate
+        gate_message_sign = PM[3]+" "+PM[4]+" "+PM[5]
+        print(gate_message_sign)
+        pm_sign = hibridService.sign_message(gate_message_sign)
+        gate_message = PM+ "DELIMITATOR"+pm_sign.decode()
+
+        #connect to gate
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((HOST, PORT_PG))
+            #send cipher text and encripted aes
+            encodeAndSend(s, gate_message, gate_key)
+
+
+
+
+
+
             
 
