@@ -89,7 +89,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("PI:\n", PI)
     print("PO:\n", PO)
     PI_enc, PI_key = hybridService.encrypt_hybrid(PI, gate_key)
-    PM = str(PI_enc) + 'DELIMITATOR' + str(PI_key)
+    PM = str(PI_enc.hex()) + 'DELIMITATOR' + str(PI_key.hex())
     print("ENCRYPTED PI:\n", PI_enc)
     print("ENCRYPTED PI AES KEY:\n", PI_key)
     # encode PM,PO and send to server

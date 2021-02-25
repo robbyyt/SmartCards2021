@@ -33,6 +33,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         # receive and decrypt pm and signature of pm
         merchant_message = receiveAndDecypt(conn)
         PI_enc, PI_key, signature = merchant_message.split("DELIMITATOR")
-
+        PI_enc = bytes.fromhex(PI_enc)
+        PI_key = bytes.fromhex(PI_key)
         PM = hybridService.decrypt_hybrid(PI_enc, PI_key)
         print("PM:\n", PM)
+        
