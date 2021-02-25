@@ -4,6 +4,7 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Hash import SHA256
 from Crypto.Signature import pkcs1_15
 from Crypto.Util.Padding import pad, unpad
+from hashlib import sha512
 
 
 class CryptoService:
@@ -39,20 +40,17 @@ class CryptoService:
         if not key:
             key = self.rsa_keypair
 
-        h = SHA256.new(message.encode())
-        signature = pkcs1_15.new(key).sign(h)
-        return signature
+        h = int.from_bytes(sha512(message.encode()).digest(), byteorder='big')
+        return pow(h, key.d, key.n)
 
     def verify_message(self, message, signature, key=None):
         if not key:
             key = self.rsa_keypair.publickey()
 
-        h = SHA256.new(message.encode())
-        try:
-            pkcs1_15.new(key).verify(h, signature)
+        h = int.from_bytes(sha512(message.encode()).digest(), byteorder='big')
+        if h == pow(signature, key.e, key.n):
             return True
-        except (ValueError, TypeError):
-            return False
+        return False
 
 
 if __name__ == '__main__':
