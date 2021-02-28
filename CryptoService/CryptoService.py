@@ -46,7 +46,6 @@ class CryptoService:
     def verify_message(self, message, signature, key=None):
         if not key:
             key = self.rsa_keypair.publickey()
-
         h = int.from_bytes(sha512(message.encode()).digest(), byteorder='big')
         if h == pow(signature, key.e, key.n):
             return True

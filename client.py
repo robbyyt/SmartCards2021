@@ -66,8 +66,8 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("[Client] Merchant public key is:\nN: %d\nE:%d" % (merchant_key.n, merchant_key.e))
     print("[Client] Gateway public key is:\nN: %d\nE:%d" % (gate_key.n, gate_key.e))
     # hybrid encode public key and send to merchant
+    print("SENDING PUBLIC KEY:\n", public_key.export_key().decode())
     encodeAndSend(s, public_key.export_key().decode(), merchant_key)
-
     # receive uid and sign
     # decrypt data
     merchant_message = receiveAndDecypt(s)
@@ -90,8 +90,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("PO:\n", PO)
     PI_enc, PI_key = hybridService.encrypt_hybrid(PI, gate_key)
     PM = str(PI_enc.hex()) + 'DELIMITATOR' + str(PI_key.hex())
-    print("ENCRYPTED PI:\n", PI_enc)
-    print("ENCRYPTED PI AES KEY:\n", PI_key)
     # encode PM,PO and send to server
     to_send = PM + "DELIMITATOR" + str(PO)
     encodeAndSend(s, to_send, merchant_key)

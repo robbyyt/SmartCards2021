@@ -46,6 +46,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         print('Client connected from: ', addr)
         # receive cipher text and encrypted aes key and decode data
         client_pk = receiveAndDecypt(conn)
+        print("CPC:" + client_pk)
         client_pk = RSA.import_key(client_pk)
         print("[Merchant] Computed Client public key as:\nN: %d\nE: %d\n" % (client_pk.n, client_pk.e))
         print("[Metchant] Gateway public key is:\nN: %d\nE:%d" % (gate_key.n, gate_key.e))
@@ -80,8 +81,11 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
         # prepare message for gate (step 4)
         PM = PI_enc + 'DELIMITATOR' + PI_key
+        print(PI_enc)
         to_sign = sid + " " + client_pk.export_key().decode() + " " + amount
+        print("TO SIGN:\n", to_sign)
         signature = hybridService.sign_message(to_sign)
+        print("SIGNATURE:\n", signature)
         to_send = PM + "DELIMITATOR" + str(signature)
 
         # connect to gate

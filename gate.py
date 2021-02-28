@@ -35,6 +35,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         PI_enc, PI_key, signature = merchant_message.split("DELIMITATOR")
         PI_enc = bytes.fromhex(PI_enc)
         PI_key = bytes.fromhex(PI_key)
+
         PM = hybridService.decrypt_hybrid(PI_enc, PI_key)
-        print("PM:\n", PM)
-        
+        print(PM)
+        CardN, CardExp, CCode, Sid, Amount, PI_end = PM.split(" ", 5)
+        PubKC, NC, M, PI_sig = PI_end.rsplit(" ", 3)
+        to_verify = Sid + " " + PubKC + " " + Amount
+        print("TO VERIFY:\n", to_verify)
+        print("SIGNATURE:\n", signature)
+        PI_sig = int(PI_sig)
+
+        if hybridService.verify_message(to_verify, PI_sig, key=merchant_key):
+            print("Successfully verified PM information from merchant")
+        else:
+            raise ValueError("Could not verify PM sent by merchant!")
+
