@@ -19,7 +19,7 @@ hybridService = CryptoService.CryptoService()
 def parse_PM_PI(sid):
     PI = ""
     for i in [cardInfo['CardN'], cardInfo['CardExp'], cardInfo['CCode'], sid, cardInfo['Amount'],
-                   merchant_key.publickey().exportKey().decode(), cardInfo['NC'], cardInfo['M']]:
+                   hybridService.rsa_keypair.publickey().exportKey().decode(), cardInfo['NC'], cardInfo['M']]:
         PI += i + " "
     # removing blank space for signing
     PI = PI[:-1]

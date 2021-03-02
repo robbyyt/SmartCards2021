@@ -39,11 +39,12 @@ class CryptoService:
     def sign_message(self, message, key=None):
         if not key:
             key = self.rsa_keypair
-
+        print("key sign", key.n)
         h = int.from_bytes(sha512(message.encode()).digest(), byteorder='big')
         return pow(h, key.d, key.n)
 
     def verify_message(self, message, signature, key=None):
+        print("key verify", key.n)
         if not key:
             key = self.rsa_keypair.publickey()
         h = int.from_bytes(sha512(message.encode()).digest(), byteorder='big')

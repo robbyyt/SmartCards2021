@@ -11,7 +11,7 @@ hybridService = CryptoService.CryptoService()
 gate_key = RSA.import_key(open("gate_key.pem").read())
 
 with open('merchant_key.pem', 'wb') as f:
-    pk = hybridService.rsa_keypair.exportKey()
+    pk = hybridService.rsa_keypair.publickey().exportKey()
     f.write(pk)
 
 print("[Merchant] My public key is:\nN: %d\nE:%d" % (hybridService.rsa_keypair.publickey().n, hybridService.rsa_keypair.publickey().e))
@@ -40,6 +40,7 @@ def encodeAndSend(conn, message, key):
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.bind((HOST, PORT_CLIENT))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.listen()
     conn, addr = s.accept()
     with conn:
@@ -83,7 +84,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         PM = PI_enc + 'DELIMITATOR' + PI_key
         print(PI_enc)
         to_sign = sid + " " + client_pk.export_key().decode() + " " + amount
-        print("TO SIGN:\n", to_sign)
+        print("TO SIGN:\n|", to_sign,"|")
         signature = hybridService.sign_message(to_sign)
         print("SIGNATURE:\n", signature)
         to_send = PM + "DELIMITATOR" + str(signature)
