@@ -1,5 +1,6 @@
 import socket
 import json
+import random
 from Crypto.PublicKey import RSA
 from CryptoService import CryptoService
 
@@ -13,20 +14,20 @@ merchant_key = RSA.import_key(open("merchant_key.pem").read())
 gate_key = RSA.import_key(open("gate_key.pem").read())
 # crypto services
 hybridService = CryptoService.CryptoService()
-
+NC = str(random.randint(100, 999))
 
 # parse card info
 def parse_PM_PI(sid):
     PI = ""
     for i in [cardInfo['CardN'], cardInfo['CardExp'], cardInfo['CCode'], sid, cardInfo['Amount'],
-                   hybridService.rsa_keypair.publickey().exportKey().decode(), cardInfo['NC'], cardInfo['M']]:
+                   hybridService.rsa_keypair.publickey().exportKey().decode(), NC, cardInfo['M']]:
         PI += i + " "
     # removing blank space for signing
     PI = PI[:-1]
     signature_PI = hybridService.sign_message(PI)
     PI += " " + str(signature_PI)
     PO = ""
-    for i in [cardInfo["OrderDesc"], sid, cardInfo['Amount'], cardInfo['NC']]:
+    for i in [cardInfo["OrderDesc"], sid, cardInfo['Amount'], NC]:
         PO += i + " "
 
     # removing blank space for signing
@@ -94,5 +95,16 @@ def startTransaction():
         # encode PM,PO and send to server
         to_send = PM + "DELIMITATOR" + str(PO)
         encodeAndSend(s, to_send, merchant_key)
+        # receive final response
+        response = receiveAndDecypt(s)
+        Resp, Sid, SigPG = response.split(" ")
+
+        to_verify = Resp + " " + Sid + " " + cardInfo["Amount"] + " " + NC
+
+        if hybridService.verify_message(to_verify, int(SigPG), key=gate_key):
+            print("Payment status verified. Result: %s" % Resp)
+        else:
+            raise ValueError("Could not verify that payment response is from gateway!")
+
 
 startTransaction()

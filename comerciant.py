@@ -94,3 +94,19 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s2.connect((HOST, PORT_PG))
             # send cipher text and encripted aes
             encodeAndSend(s2, to_send, gate_key)
+            response = receiveAndDecypt(s2)
+            Resp, Sid, SigPG = response.split(" ")
+            SigPG = int(SigPG)
+            to_verify = Resp + " " + sid + " " + amount + " " + nc
+
+            if hybridService.verify_message(to_verify, SigPG, key=gate_key):
+                print("Verified info from PG")
+            else:
+                raise ValueError("Can't verify info from PG")
+
+            # step 6
+            to_send = Resp + " " + sid + " " + str(SigPG)
+            encodeAndSend(conn, to_send, key=client_pk)
+
+
+

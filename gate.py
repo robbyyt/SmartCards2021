@@ -1,6 +1,7 @@
 import socket
 from CryptoService import CryptoService
 from Crypto.PublicKey import RSA
+import json
 
 HOST = '127.0.0.1'
 PORT = 12345
@@ -10,7 +11,7 @@ hybridService = CryptoService.CryptoService()
 with open('gate_key.pem', 'wb') as f:
     pk = hybridService.rsa_keypair.publickey().export_key()
     f.write(pk)
-merchant_key = RSA.import_key(open("merchant_key.pem").read())
+
 
 def receiveAndDecypt(conn):
     length = conn.recv(1024)
@@ -20,6 +21,18 @@ def receiveAndDecypt(conn):
     aes_encryped_key = conn.recv(int(length[1]))
     # decode data
     return hybridService.decrypt_hybrid(cipherTextClient, aes_encryped_key)
+
+
+def encodeAndSend(conn, message, key=None):
+    if not key:
+        key = hybridService.rsa_keypair
+
+    chipertext, enc_aes_key = hybridService.encrypt_hybrid(message, key)
+    # send ciphertext and encrypted key to merchant
+    length = str(len(chipertext)) + ' ' + str(len(enc_aes_key))
+    conn.sendall(length.encode())
+    conn.sendall(chipertext)
+    conn.sendall(enc_aes_key)
 
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -41,13 +54,38 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         CardN, CardExp, CCode, Sid, Amount, PI_end = PM.split(" ", 5)
         PubKC, NC, M, PI_sig = PI_end.rsplit(" ", 3)
         to_verify = Sid + " " + PubKC + " " + Amount
-        print("TO VERIFY:\n|", to_verify, "|")
-        print("SIGNATURE:\n", signature)
-        PI_sig = int(PI_sig)
-        print("merchant",merchant_key.n)
-        if hybridService.verify_message(to_verify, PI_sig, key=RSA.import_key(open("merchant_key.pem").read())
-):
+
+        merchant_key = RSA.import_key(open("merchant_key.pem").read())
+
+        if hybridService.verify_message(to_verify, int(signature), key=merchant_key):
             print("Successfully verified PM information from merchant")
         else:
             raise ValueError("Could not verify PM sent by merchant!")
 
+        to_verify = CardN + " " + CardExp + " " + CCode + " " + Sid + " " + Amount + " " + PubKC + " " + NC + " " + M
+
+        if hybridService.verify_message(to_verify, int(PI_sig), key=RSA.import_key(PubKC)):
+            print("Successfully verified PI info from customer")
+        else:
+            raise ValueError("Could not verify signed PI from customer")
+
+        # step 5
+        with open('Data/gatewayPaymentInfo.json') as f:
+            gatewayClientInfo = json.load(f)
+
+        response = "OK"
+        if CardN != gatewayClientInfo["CardN"] or CardExp != gatewayClientInfo["CardExp"] \
+                or CCode != gatewayClientInfo["CCode"] or int(Amount) > int(gatewayClientInfo["Balance"]):
+            response = "Abort"
+
+        if response == "OK":
+            gatewayClientInfo["Balance"] = str(int(gatewayClientInfo["Balance"]) - int(Amount))
+
+        with open('Data/gatewayPaymentInfo.json', 'w') as f:
+            json.dump(gatewayClientInfo, f)
+
+        to_sign = response + " " + Sid + " " + Amount + " " + NC
+        signature = hybridService.sign_message(to_sign)
+
+        to_send = response + " " + Sid + " " + str(signature)
+        encodeAndSend(conn, to_send, key=merchant_key)
