@@ -58,16 +58,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         merchant_key = RSA.import_key(open("merchant_key.pem").read())
 
         if hybridService.verify_message(to_verify, int(signature), key=merchant_key):
-            print("Successfully verified PM information from merchant")
+            print("[Gate]Successfully verified PM information from merchant")
         else:
-            raise ValueError("Could not verify PM sent by merchant!")
+            raise ValueError("[Gate]Could not verify PM sent by merchant!")
 
         to_verify = CardN + " " + CardExp + " " + CCode + " " + Sid + " " + Amount + " " + PubKC + " " + NC + " " + M
 
         if hybridService.verify_message(to_verify, int(PI_sig), key=RSA.import_key(PubKC)):
-            print("Successfully verified PI info from customer")
+            print("[Gate]Successfully verified PI info from customer")
         else:
-            raise ValueError("Could not verify signed PI from customer")
+            raise ValueError("[Gate]Could not verify signed PI from customer")
 
         # step 5
         with open('Data/gatewayPaymentInfo.json') as f:
@@ -80,9 +80,16 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
         if response == "OK":
             gatewayClientInfo["Balance"] = str(int(gatewayClientInfo["Balance"]) - int(Amount))
+            with open('Data/accounts.txt', 'r') as f:
+                merchant_account = float(f.readline())
+            with open('Data/accounts.txt', 'w') as f:
+                f.write(str(merchant_account+float(Amount)))
 
         with open('Data/gatewayPaymentInfo.json', 'w') as f:
             json.dump(gatewayClientInfo, f)
+
+
+        print("[Gate] Sending response to merchant:", response)   
 
         to_sign = response + " " + Sid + " " + Amount + " " + NC
         signature = hybridService.sign_message(to_sign)

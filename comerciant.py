@@ -44,13 +44,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.listen()
     conn, addr = s.accept()
     with conn:
-        print('Client connected from: ', addr)
         # receive cipher text and encrypted aes key and decode data
         client_pk = receiveAndDecypt(conn)
-        print("CPC:" + client_pk)
         client_pk = RSA.import_key(client_pk)
         print("[Merchant] Computed Client public key as:\nN: %d\nE: %d\n" % (client_pk.n, client_pk.e))
-        print("[Metchant] Gateway public key is:\nN: %d\nE:%d" % (gate_key.n, gate_key.e))
         # generate uid and signature
         client_uid = str(uuid.uuid1())
         print("[Merchant] Generated SID: ", client_uid)
@@ -84,15 +81,14 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         PM = PI_enc + 'DELIMITATOR' + PI_key
         print(PI_enc)
         to_sign = sid + " " + client_pk.export_key().decode() + " " + amount
-        print("TO SIGN:\n|", to_sign,"|")
         signature = hybridService.sign_message(to_sign)
-        print("SIGNATURE:\n", signature)
         to_send = PM + "DELIMITATOR" + str(signature)
 
         # connect to gate
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
             s2.connect((HOST, PORT_PG))
             # send cipher text and encripted aes
+            print("[Merchant] Send information to the gate")
             encodeAndSend(s2, to_send, gate_key)
             response = receiveAndDecypt(s2)
             Resp, Sid, SigPG = response.split(" ")
@@ -106,6 +102,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
             # step 6
             to_send = Resp + " " + sid + " " + str(SigPG)
+            print("[Merchant] Send response to the client")
             encodeAndSend(conn, to_send, key=client_pk)
 
 

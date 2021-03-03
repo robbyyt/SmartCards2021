@@ -65,10 +65,7 @@ def startTransaction():
         # get client public key from service
         public_key = hybridService.rsa_keypair.publickey()
         print("[Client] My public key is:\nN: %d\nE:%d" % (public_key.n, public_key.e))
-        print("[Client] Merchant public key is:\nN: %d\nE:%d" % (merchant_key.n, merchant_key.e))
-        print("[Client] Gateway public key is:\nN: %d\nE:%d" % (gate_key.n, gate_key.e))
         # hybrid encode public key and send to merchant
-        print("SENDING PUBLIC KEY:\n", public_key.export_key().decode())
         encodeAndSend(s, public_key.export_key().decode(), merchant_key)
         # receive uid and sign
         # decrypt data
@@ -107,4 +104,4 @@ def startTransaction():
             raise ValueError("Could not verify that payment response is from gateway!")
 
 
-startTransaction()
+# startTransaction()

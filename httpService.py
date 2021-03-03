@@ -2,6 +2,7 @@ import http.server
 import socketserver
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
+import json
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pages import header, footer, landingPageContent
@@ -35,11 +36,12 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
                             </div>
                             <div style="margin:20px"> <a class = "btn btn-primary" href = "/accounts">Go to accounts </a> </div>
                             """ + footer
-        elif self.path == "/account":
+        elif self.path == "/accounts":
             f = open('Data/accounts.txt', 'r')
-            amounts = f.readline()
-            amounts = amounts.split()
-            html = header + "<h3> Client account: " + amounts[0] + "</h3>" +"<h3> Merchant account: " + amounts[1] + "</h3>" +footer
+            amountsMr = f.readline()
+            with open('Data/gatewayPaymentInfo.json') as f1:
+                amountsCL = json.load(f1)
+            html = header + "<h3> Client account: " + amountsCL["Balance"] + "</h3>" +"<h3> Merchant account: " + amountsMr + "</h3>" +footer
 
 
         # Writing the HTML contents with UTF-8
